@@ -2,9 +2,9 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { config } from 'dotenv';
-import { connectDb } from './db/index';
-import authRouter from './routes/auth';
-import { handleConn } from './handleConn';
+import { connectDb } from './db/index.js';
+import authRouter from './routes/auth.js';
+import { handleConn } from './handleConn.js';
 config();
 startServer()
     .catch((error) => {

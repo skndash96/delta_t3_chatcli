@@ -1,6 +1,6 @@
 import { hashSync } from "bcrypt";
 import { Router } from "express";
-import { getToken } from "../utils/jwt";
+import { getToken } from "../utils/jwt.js";
 const router = Router();
 router.post("/register", async (req, res) => {
     const { name, password } = req.body;

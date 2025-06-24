@@ -2,10 +2,10 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { config } from 'dotenv';
-import { connectDb } from './db/index';
-import authRouter from './routes/auth';
-import { handleConn } from './handleConn';
-import { MySocket } from './types';
+import { connectDb } from './db/index.js';
+import authRouter from './routes/auth.js';
+import { handleConn } from './handleConn.js';
+import { MySocket } from './types.js';
 
 config();
 

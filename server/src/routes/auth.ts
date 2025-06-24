@@ -1,7 +1,7 @@
 import { hashSync } from "bcrypt";
 import { Router } from "express";
-import { getToken } from "../utils/jwt";
-import { User } from "../services/users";
+import { getToken } from "../utils/jwt.js";
+import { User } from "../services/users.js";
 
 const router = Router()
 

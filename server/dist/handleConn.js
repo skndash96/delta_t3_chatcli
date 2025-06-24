@@ -1,7 +1,7 @@
-import { verifyToken } from './utils/jwt';
-import { addClient, removeClient } from './services/clients';
-import { addSocketToRoom, getRoom, removeSocketFromRoom } from './services/rooms';
-import { addMessage } from './services/messages';
+import { verifyToken } from './utils/jwt.js';
+import { addClient, removeClient } from './services/clients.js';
+import { addSocketToRoom, getRoom, removeSocketFromRoom } from './services/rooms.js';
+import { addMessage } from './services/messages.js';
 export async function handleConn(socket) {
     const authHeader = socket.handshake.headers['authorization'] || '';
     if (!authHeader.startsWith('Bearer ')) {
