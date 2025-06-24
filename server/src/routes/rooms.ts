@@ -7,14 +7,14 @@ roomsRouter.post("/", async (req, res) => {
   const userId = req.userId!;
   const db = req.db!;
 
-  const roomName = req.body.roomName;
+  const roomId = req.body.roomId;
 
-  if (!roomName) {
+  if (!roomId) {
     res.status(400).json({ error: "Room name is required" });
     return
   }
 
-  const q = await db.query<Room>(`INSERT INTO rooms (name, owner_id) VALUES ($1, $2) RETURNING *`, [roomName, userId])
+  const q = await db.query<Room>(`INSERT INTO rooms (id, owner_id) VALUES ($1, $2) RETURNING *`, [roomId, userId])
 
   if (q.rowCount === 0) {
     res.status(500).json({ error: "Failed to create room" });

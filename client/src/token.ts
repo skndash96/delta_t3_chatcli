@@ -49,6 +49,8 @@ export async function saveToken(token: string) {
   } as StorageObject;
 
   await writeStorageObject(storageObject);
+
+  console.log('Token saved to', tokenPath);
 }
 
 export function saveRooms(rooms: string[]): void {

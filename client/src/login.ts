@@ -27,7 +27,6 @@ export default async function login() {
     console.log('Login successful')
 
     saveToken(data)
-    console.log('Token saved to ./.token');
   } catch (error) {
     console.error('Error:', error)
   }

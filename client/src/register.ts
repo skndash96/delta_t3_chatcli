@@ -28,7 +28,6 @@ export default async function register() {
     console.log('Registration successful')
 
     saveToken(data)
-    console.log('Token saved to ./.token');
   } catch (error) {
     console.error('Error:', error)
   }

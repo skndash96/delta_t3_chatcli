@@ -11,7 +11,7 @@ declare global {
 }
 
 export interface MySocket extends Socket {
-  db?: MyDbType;
+  db?: Client;
   userId?: number;
-  userName?: string;
+  name?: string;
 }

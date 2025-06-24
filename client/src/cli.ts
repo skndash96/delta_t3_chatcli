@@ -1,6 +1,7 @@
 import readline from "readline";
 import { readStorageObject } from "./token";
 import { io, Socket } from "socket.io-client";
+import { decodeJwt } from "jose";
 
 readline.emitKeypressEvents(process.stdin);
 
@@ -9,6 +10,7 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
 export default class CLI {
   token: string = ""
+  tokenPayload: { userId: number, name: string } | null = null;
   lines: string[] = []
   socket: Socket | null = null
   inputBuffer: string = ""
@@ -25,6 +27,9 @@ export default class CLI {
       .then(storage => {
         if (storage) {
           this.token = storage.token;
+
+          const payload = decodeJwt(storage.token) as typeof this.tokenPayload;
+          this.tokenPayload = payload!
 
           this.setupConn();
           this.setupListeners();
@@ -101,7 +106,7 @@ export default class CLI {
       setTimeout(() => {
         this.setLines([]);
         this.printHelp()
-      }, 1000)
+      }, 200)
     })
 
     socket.on('error', (error) => {
@@ -187,7 +192,7 @@ Command list:
       storageObject.rooms.forEach(room => {
         this.addLine(`- ${room}`);
       });
-    }  catch (error) {
+    } catch (error) {
       this.addLine(`Error fetching rooms: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -212,7 +217,7 @@ Command list:
         this.addLine(`Error: ${JSON.stringify(error)}`);
         return;
       }
-      this.setLine(`Room created: ${data.roomName}`);
+      this.setLine(`Room created: ${data}`);
     } catch (error) {
       this.addLine(`Error creating room: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -223,10 +228,15 @@ Command list:
     senderName: string;
     content: string;
   }) {
-    this.addLine(`${message.senderName}: ${message.content}`);
+    this.addLine(`${message.senderId === this.tokenPayload!.userId ? "You" : message.senderName}: ${message.content}`);
   }
 
   async joinRoom(roomName: string) {
+    if (this.activeRoom) {
+      this.addLine(`You are already in room: ${this.activeRoom}`);
+      return;
+    }
+
     if (!roomName) {
       this.addLine('Room ID is required to join a room');
       return;
@@ -234,11 +244,13 @@ Command list:
 
     const socket = this.socket!;
 
-    socket.emit('joinRoom', { roomName });
+    socket.emit('joinRoom', roomName);
 
-    socket.on('message', this.onMessageHandler);
+    socket.on('message', this.onMessageHandler.bind(this));
 
     this.activeRoom = roomName;
+
+    this.addLine(`Joined room: ${roomName}`);
   }
 
   async leaveRoom() {
@@ -249,7 +261,7 @@ Command list:
       return;
     }
 
-    socket.emit('leaveRoom', { roomName: this.activeRoom });
+    socket.emit('leaveRoom', this.activeRoom);
 
     socket.off('message', this.onMessageHandler);
     this.activeRoom = null;
@@ -271,7 +283,5 @@ Command list:
     }
 
     socket.emit('message', this.activeRoom, message);
-
-    this.addLine(`You: ${message}`);
   }
 }

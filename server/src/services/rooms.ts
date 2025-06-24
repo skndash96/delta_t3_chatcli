@@ -1,4 +1,11 @@
-export interface Room {
+import { MySocket } from "../types.js";
+
+interface _Room {
+  id: string;
+  owner_id: number;
+}
+
+export type Room = {
   roomId: string;
   ownerId: number;
   socketIds: Set<string>;
@@ -24,6 +31,27 @@ export function removeSocketFromRoom(roomId: string, socketId: string) {
   }
 }
 
-export function getRoom(roomId: string): Room | undefined {
-  return activeRooms.get(roomId);
+export async function getRoom(socket: MySocket, roomId: string) {
+  const activeRoom = activeRooms.get(roomId);
+
+  if (!activeRoom) {
+    const db = socket.db!
+    const room = await db.query<_Room>(`SELECT * FROM rooms WHERE id = $1`, [roomId]);
+
+    if (room.rows.length === 0) {
+      return null
+    }
+
+    if (!activeRooms.has(roomId)) {
+      activeRooms.set(roomId, {
+        roomId: room.rows[0].id,
+        ownerId: room.rows[0].owner_id,
+        socketIds: new Set(),
+      });
+    }
+
+    return activeRooms.get(roomId)!;
+  }
+
+  return activeRoom;
 }

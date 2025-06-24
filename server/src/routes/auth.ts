@@ -22,6 +22,7 @@ authRouter.post("/register", async (req, res) => {
 
     const token = await getToken({
       userId: user.id,
+      name
     });
 
     res.status(201).json({ data: token });
@@ -52,6 +53,7 @@ authRouter.post("/login", async (req, res) => {
 
     const token = await getToken({
       userId: user.id,
+      name
     });
 
     res.json({ data: token });

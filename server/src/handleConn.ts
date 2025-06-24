@@ -16,14 +16,15 @@ export async function handleConn(socket: MySocket) {
   const token = authHeader.split(' ').slice(1).join(' ');
 
   try {
-    const userId = await verifyToken(token)
+    const user = await verifyToken(token)
 
-    if (!userId) {
+    if (!user) {
       socket.disconnect(true);
       return;
     }
 
-    socket.userId = userId;
+    socket.userId = user.userId;
+    socket.name = user.name
   } catch (error) {
     console.error('Token verification error:', error);
     socket.disconnect(true);
@@ -38,13 +39,13 @@ export async function handleConn(socket: MySocket) {
     console.log(`Socket ${socket.id} disconnected`);
   });
 
-  socket.on('joinRoom', (roomId: string) => {
+  socket.on('joinRoom', async (roomId: string) => {
     if (!roomId) {
       console.error('Room ID is required to join a room');
       return;
     }
 
-    const room = getRoom(roomId);
+    const room = await getRoom(socket, roomId);
 
     if (!room) {
       console.error(`Room with ID ${roomId} does not exist`);
@@ -63,13 +64,13 @@ export async function handleConn(socket: MySocket) {
     socket.join(roomId);
   })
 
-  socket.on('leaveRoom', (roomId: string) => {
+  socket.on('leaveRoom', async (roomId: string) => {
     if (!roomId) {
       console.error('Room ID is required to leave a room');
       return;
     }
 
-    const room = getRoom(roomId);
+    const room = await getRoom(socket, roomId);
 
     if (!room) {
       console.error(`Room with ID ${roomId} does not exist`);
@@ -88,13 +89,13 @@ export async function handleConn(socket: MySocket) {
     socket.leave(roomId);
   });
 
-  socket.on('message', (roomId: string, message: string) => {
+  socket.on('message', async (roomId: string, message: string) => {
     if (!roomId || !message) {
       console.error('Room ID and message content are required');
       return;
     }
 
-    const room = getRoom(roomId);
+    const room = await getRoom(socket, roomId);
 
     if (!room) {
       console.error(`Room with ID ${roomId} does not exist`);
@@ -111,7 +112,7 @@ export async function handleConn(socket: MySocket) {
     const msgObj: Message = {
       roomId,
       senderId: socket.userId!,
-      senderName: socket.userName || 'Anonymous',
+      senderName: socket.name || 'Anonymous',
       content: message,
       timestamp: Date.now()
     }

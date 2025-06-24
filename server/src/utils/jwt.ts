@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 
 export interface JWTPayload {
   userId: number;
+  name: string;
 }
 
 export const getToken = (payload: JWTPayload) => {
@@ -19,7 +20,7 @@ export const verifyToken = async (token: string) => {
 
   try {
     const { payload } = await jwtVerify<JWTPayload>(token, secret);
-    return payload.userId;
+    return payload;
   } catch (error) {
     console.error('Token verification error:', error);
     return null;
