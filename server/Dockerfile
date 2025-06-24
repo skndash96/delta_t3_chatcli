@@ -2,8 +2,9 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-COPY ./src ./package.json ./src/pnpm-lock.yaml ./tsconfig.json ./
+COPY ./src ./package.json ./pnpm-lock.yaml ./tsconfig.json ./
 
-RUN ["pnpm", "install", "--frozen-lockfile"]
+RUN ["npm", "install", "-g", "pnpm"]
+RUN ["npm", "install", "--frozen-lockfile"]
 
-CMD []
+CMD ["sh", "-c", "pnpm run build && pnpm run start"]

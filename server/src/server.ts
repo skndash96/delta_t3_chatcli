@@ -6,6 +6,8 @@ import { connectDb } from './db/index.js';
 import authRouter from './routes/auth.js';
 import { handleConn } from './handleConn.js';
 import { MySocket } from './types.js';
+import authMiddleware from './middlewares/auth.js';
+import roomsRouter from './routes/rooms.js';
 
 config();
 
@@ -34,6 +36,7 @@ async function startServer() {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/rooms', authMiddleware, roomsRouter)  
 
   io.on('connection', (socket) => {
     const mySocket = socket as MySocket;

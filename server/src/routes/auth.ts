@@ -1,11 +1,11 @@
-import { hashSync } from "bcrypt";
+import { compareSync, hashSync } from "bcrypt";
 import { Router } from "express";
 import { getToken } from "../utils/jwt.js";
 import { User } from "../services/users.js";
 
-const router = Router()
+const authRouter = Router()
 
-router.post("/register", async (req, res) => {
+authRouter.post("/register", async (req, res) => {
   const { name, password } = req.body;
 
   if (!name || !password) {
@@ -24,7 +24,7 @@ router.post("/register", async (req, res) => {
       userId: user.id,
     });
 
-    res.status(201).json({ token });
+    res.status(201).json({ data: token });
   } catch (error) {
     console.error('Database query error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -32,13 +32,11 @@ router.post("/register", async (req, res) => {
   }
 })
 
-router.post("/login", async (req, res) => {
+authRouter.post("/login", async (req, res) => {
   const { name, password } = req.body;
 
-  const hashedPassword = hashSync(password, 10);
-
   try {
-    const q = await req.db!.query<User>('SELECT * FROM users WHERE name = $1 AND password = $2 LIMIT 1', [name, hashedPassword])
+    const q = await req.db!.query<User>('SELECT * FROM users WHERE name = $1 LIMIT 1', [name])
 
     if (q.rows.length === 0) {
       res.status(401).json({ error: 'Invalid name or password' });
@@ -47,11 +45,16 @@ router.post("/login", async (req, res) => {
 
     const user = q.rows[0];
 
+    if (!compareSync(password, user.password)) {
+      res.status(401).json({ error: 'Invalid name or password' });
+      return
+    }
+
     const token = await getToken({
       userId: user.id,
     });
 
-    res.json({ token });
+    res.json({ data: token });
   } catch (error) {
     console.error('Database query error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -59,4 +62,4 @@ router.post("/login", async (req, res) => {
   }
 })
 
-export default router;
+export default authRouter;

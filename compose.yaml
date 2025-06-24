@@ -1,13 +1,36 @@
 version: '3.8'
 
 services:
+  server:
+    container_name: node_server
+    build:
+      context: server
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
 
   db:
     container_name: postgres_db
     build:
       context: postgres
       dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     restart: always
+    expose:
+      - "5432"
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
