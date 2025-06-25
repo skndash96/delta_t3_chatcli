@@ -1,3 +1,4 @@
+import { Client } from "pg";
 import { MySocket } from "../types.js";
 
 interface _Room {
@@ -8,34 +9,33 @@ interface _Room {
 export type Room = {
   roomId: string;
   ownerId: number;
-  socketIds: Set<string>;
+  sockets: Set<MySocket>;
 }
 
 const activeRooms = new Map<string, Room>();
 
-export function addSocketToRoom(roomId: string, socketId: string, ownerId: number) {
+export function addSocketToRoom(socket: MySocket, roomId: string) {
   if (!activeRooms.has(roomId)) {
-    activeRooms.set(roomId, { roomId, socketIds: new Set(), ownerId });
+    activeRooms.set(roomId, { roomId, sockets: new Set(), ownerId: socket.userId! });
   }
 
-  activeRooms.get(roomId)!.socketIds.add(socketId);
+  activeRooms.get(roomId)!.sockets.add(socket);
 }
 
-export function removeSocketFromRoom(roomId: string, socketId: string) {
+export function removeSocketFromRoom(socket: MySocket, roomId: string) {
   const room = activeRooms.get(roomId);
   if (room) {
-    room.socketIds.delete(socketId);
-    if (room.socketIds.size === 0) {
+    room.sockets.delete(socket);
+    if (room.sockets.size === 0) {
       activeRooms.delete(roomId);
     }
   }
 }
 
-export async function getRoom(socket: MySocket, roomId: string) {
+export async function getRoom(db: Client, roomId: string) {
   const activeRoom = activeRooms.get(roomId);
 
   if (!activeRoom) {
-    const db = socket.db!
     const room = await db.query<_Room>(`SELECT * FROM rooms WHERE id = $1`, [roomId]);
 
     if (room.rows.length === 0) {
@@ -46,7 +46,7 @@ export async function getRoom(socket: MySocket, roomId: string) {
       activeRooms.set(roomId, {
         roomId: room.rows[0].id,
         ownerId: room.rows[0].owner_id,
-        socketIds: new Set(),
+        sockets: new Set(),
       });
     }
 

@@ -31,10 +31,10 @@ export async function handleConn(socket: MySocket) {
     return;
   }
 
-  addClient(socket.userId, socket.id);
+  addClient(socket);
 
   socket.on('disconnect', () => {
-    removeClient(socket.id)
+    removeClient(socket)
 
     console.log(`Socket ${socket.id} disconnected`);
   });
@@ -45,19 +45,19 @@ export async function handleConn(socket: MySocket) {
       return;
     }
 
-    const room = await getRoom(socket, roomId);
+    const room = await getRoom(socket.db!, roomId);
 
     if (!room) {
       console.error(`Room with ID ${roomId} does not exist`);
       return;
     }
 
-    if (room.socketIds.has(socket.id)) {
+    if (room.sockets.has(socket)) {
       console.warn(`Socket ${socket.id} is already in room ${roomId}`);
       return;
     }
 
-    addSocketToRoom(roomId, socket.id, socket.userId!);
+    addSocketToRoom(socket, roomId);
 
     console.log(`Socket ${socket.id} joined room ${roomId}`);
 
@@ -70,19 +70,19 @@ export async function handleConn(socket: MySocket) {
       return;
     }
 
-    const room = await getRoom(socket, roomId);
+    const room = await getRoom(socket.db!, roomId);
 
     if (!room) {
       console.error(`Room with ID ${roomId} does not exist`);
       return;
     }
 
-    if (!room.socketIds.has(socket.id)) {
+    if (!room.sockets.has(socket)) {
       console.warn(`Socket ${socket.id} is not in room ${roomId}`);
       return;
     }
 
-    removeSocketFromRoom(roomId, socket.id);
+    removeSocketFromRoom(socket, roomId);
 
     console.log(`Socket ${socket.id} left room ${roomId}`);
 
@@ -95,14 +95,14 @@ export async function handleConn(socket: MySocket) {
       return;
     }
 
-    const room = await getRoom(socket, roomId);
+    const room = await getRoom(socket.db!, roomId);
 
     if (!room) {
       console.error(`Room with ID ${roomId} does not exist`);
       return;
     }
 
-    if (!room.socketIds.has(socket.id)) {
+    if (!room.sockets.has(socket)) {
       console.warn(`Socket ${socket.id} is not in room ${roomId}`);
       return;
     }
@@ -117,7 +117,8 @@ export async function handleConn(socket: MySocket) {
       timestamp: Date.now()
     }
 
+    socket.emit("message", msgObj);
     socket.to(roomId).emit('message', msgObj);
-    addMessage(msgObj);
+    await addMessage(socket.db!, msgObj);
   })
 }

@@ -46,13 +46,14 @@ export default class CLI {
 
     if (this.lines.length > maxRows) {
       this.lines = this.lines.slice(-maxRows);
-    } else {
+    }
+
+    if (promptAtEnd) {
       for (let i = this.lines.length; i < maxRows; i++) {
         this.lines.push('');
       }
+      console.clear();
     }
-
-    console.clear();
 
     console.log(
       this.lines.slice(-maxRows).map(line => {
@@ -77,18 +78,13 @@ export default class CLI {
     this.render();
   }
 
-  setLines(lines: string[]) {
-    this.lines = lines;
-    this.render();
-  }
-
-  setLine(line: string) {
-    this.lines = [line];
+  addLines(lines: string[]) {
+    this.lines.push("")
+    this.lines = this.lines.concat(lines);
     this.render();
   }
 
   setupConn() {
-    this.setLines([])
     this.addLine('Connecting to server...');
 
     const socket = io('http://localhost:3000', {
@@ -104,14 +100,12 @@ export default class CLI {
       this.socket = socket;
 
       setTimeout(() => {
-        this.setLines([]);
         this.printHelp()
       }, 200)
     })
 
     socket.on('error', (error) => {
-      this.endWithLine(`Socket error: ${error.message}`);
-      process.exit(1);
+      this.addLine(`Error: ${error.message}`);
     })
 
     socket.on('connect_error', (err) => {
@@ -126,7 +120,6 @@ export default class CLI {
   }
 
   setupListeners() {
-    this.setLines([])
     process.stdin.on('keypress', async (str, key) => {
       if (key.name === 'return') {
         const inp = this.inputBuffer.trim().split(/\s+/);
@@ -144,10 +137,12 @@ export default class CLI {
           this.joinRoom(inp[1])
         } else if (inp[0] === 'lr') {
           this.leaveRoom()
+        } else if (inp[0] === 'ir') {
+          this.infoRoom()
         } else if (inp[0] === 'sr') {
           this.sendMessage(inp.slice(1).join(' '))
         } else {
-          console.error(`Unknown command: ${this.inputBuffer}`);
+          this.addLine(`Unknown command: ${inp[0]}`);
         }
 
         this.rl.prompt();
@@ -165,14 +160,15 @@ export default class CLI {
 
   printHelp() {
     const help = `
-Welcome to ChatCLI!
-Command list:
-- help: Show this help message
-- exit: Exit the CLI
-- ar: All previous rooms
-- cr <id>: Create a room
-- jr <id>: Join a room
-- sr <msg>: Send a message to the current room
+welcome to chatCLI!
+command list:
+- help: show this help message
+- exit: exit the CLI
+- ar: your created rooms
+- cr <id>: create a room
+- jr <id>: join a room
+- sr <msg>: send a message to the current room
+- ir: info about the current room
 - lr: leave the current room
     `.split('\n').map(line => line.trim()).filter(Boolean);
 
@@ -182,16 +178,29 @@ Command list:
 
   async allRooms() {
     try {
-      const storageObject = await readStorageObject();
-      if (!storageObject || !storageObject.rooms || storageObject.rooms.length === 0) {
-        this.addLine('No rooms found. Create a room first.');
+      const response = await fetch('http://localhost:3000/api/rooms', {
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      })
+
+      if (!response.ok) {
+        const { error } = await response.json();
+        this.addLine(`Error fetching rooms: ${error}`);
         return;
       }
 
-      this.setLines(['Available rooms:']);
-      storageObject.rooms.forEach(room => {
-        this.addLine(`- ${room}`);
-      });
+      const { data } = await response.json();
+
+      if (data.length === 0) {
+        this.addLine('No rooms found');
+        return;
+      }
+
+      this.addLines([
+        `Rooms (${data.length}):`,
+        ...data.map((room: { id: string; ownerId: number }) => `${room.id}`)
+      ]);
     } catch (error) {
       this.addLine(`Error fetching rooms: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -217,7 +226,7 @@ Command list:
         this.addLine(`Error: ${JSON.stringify(error)}`);
         return;
       }
-      this.setLine(`Room created: ${data}`);
+      this.addLine(`Room created: ${data}`);
     } catch (error) {
       this.addLine(`Error creating room: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -253,7 +262,7 @@ Command list:
     this.addLine(`Joined room: ${roomName}`);
   }
 
-  async leaveRoom() {
+  leaveRoom() {
     const socket = this.socket!;
 
     if (!this.activeRoom) {
@@ -266,7 +275,7 @@ Command list:
     socket.off('message', this.onMessageHandler);
     this.activeRoom = null;
 
-    this.addLine('Left the room');
+    this.addLine(`Left room: ${this.activeRoom}`);
   }
 
   async sendMessage(message: string) {
@@ -283,5 +292,52 @@ Command list:
     }
 
     socket.emit('message', this.activeRoom, message);
+  }
+
+  async infoRoom() {
+    if (!this.activeRoom) {
+      this.addLine('You are not in any room');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/rooms/${this.activeRoom}`, {
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      });
+
+      if (!response.ok) {
+        const { error } = await response.json();
+        this.addLine(`Error fetching room info: ${error}`);
+        return;
+      }
+
+      const { data } = await response.json();
+
+
+      const users = new Map<string, { active: boolean, name: string, score: number }>()
+
+      data.participants.forEach((p: { userId: number, name: string }) => {
+        users.set(p.userId.toString(), { active: true, name: p.name, score: 0 });
+      });
+
+      data.leaderboard.forEach((p: { userId: number, name: string, score: number }) => {
+        if (users.has(p.userId.toString())) {
+          users.get(p.userId.toString())!.score = p.score;
+        } else {
+          users.set(p.userId.toString(), { active: false, name: p.name, score: p.score });
+        }
+      })
+
+      this.addLines([
+        `room ID: ${data.roomId}`,
+        `owner ID: ${data.ownerId}`,
+        `participants ${data.participants.length}:`,
+        ...Array.from(users.values()).map(v => `${v.name} (${v.active ? "*" : "-"}) ${v.score}`),
+      ]);
+    } catch (error) {
+      this.addLine(`Error fetching room info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

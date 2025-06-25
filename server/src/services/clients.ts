@@ -1,18 +1,29 @@
+import { MySocket } from "../types.js";
+import { removeSocketFromRoom } from "./rooms.js";
+
 export interface Client {
   userId: number;
   socketId: string;
+  activeRoom: string | null; // 1 socket can be in one room at a time
 }
 
 const clients = new Map<string, Client>()
 
-export function addClient(userId: number, socketId: string) {
-  clients.set(socketId, { userId, socketId });
+export function addClient(socket: MySocket) {
+  clients.set(socket.id, { userId: socket.userId!, socketId: socket.id, activeRoom: null });
 }
 
-export function removeClient(socketId: string) {
-  clients.delete(socketId);
+export function removeClient(socket: MySocket) {
+  const client = clients.get(socket.id);
+  if (client) {
+    if (client.activeRoom) {
+      removeSocketFromRoom(socket, client.activeRoom);
+    }
+
+    clients.delete(socket.id);
+  }
 }
 
-export function getClient(socketId: string): Client | undefined {
-  return clients.get(socketId);
+export function getClient(socket: MySocket): Client | undefined {
+  return clients.get(socket.id);
 }

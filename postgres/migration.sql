@@ -14,10 +14,21 @@ CREATE TABLE IF NOT EXISTS rooms (
 
 CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
-  room_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
+  room_id TEXT NOT NULL,
+  sender_id INTEGER NOT NULL,
+  sender_name TEXT NOT NULL,
   content TEXT NOT NULL,
   timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS leaderboard (
+  user_id INTEGER PRIMARY KEY,
+  room_id TEXT NOT NULL,
+  user_name TEXT NOT NULL,
+  score INTEGER NOT NULL DEFAULT 1,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+  CONSTRAINT unique_leaderboard UNIQUE (user_id, room_id)
 );

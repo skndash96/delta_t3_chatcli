@@ -5,7 +5,6 @@ const tokenPath = path.join(process.env.HOME || process.env.USERPROFILE || ".", 
 
 interface StorageObject {
   token: string;
-  rooms: string[];
 }
 
 export const readStorageObject = async () => {
@@ -56,7 +55,7 @@ export async function saveToken(token: string) {
 export function saveRooms(rooms: string[]): void {
   try {
     const obj = JSON.parse(readFileSync(tokenPath, { encoding: 'utf8' }).toString()) as StorageObject;
-    obj.rooms = rooms;
+
     writeFileSync(tokenPath, JSON.stringify(obj), { encoding: 'utf8' });
     chmodSync(tokenPath, 0o400);
     console.log('Rooms saved to', tokenPath);
