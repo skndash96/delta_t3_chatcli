@@ -24,11 +24,11 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE TABLE IF NOT EXISTS leaderboard (
-  user_id INTEGER PRIMARY KEY,
+  user_id INTEGER,
   room_id TEXT NOT NULL,
   user_name TEXT NOT NULL,
   score INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (user_id, room_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
-  CONSTRAINT unique_leaderboard UNIQUE (user_id, room_id)
+  FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
