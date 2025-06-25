@@ -9,14 +9,14 @@ export default async function authMiddleware(req: Request, res: Response, next: 
     return
   }
 
-  const userId = await verifyToken(token)
+  const payload = await verifyToken(token)
 
-  if (!userId) {
+  if (!payload) {
     res.status(401).json({ error: 'Invalid token' });
     return
   }
 
-  req.userId = userId;
+  req.userId = payload.userId;
 
   next();
 }
