@@ -1,6 +1,6 @@
 import { verifyToken } from './utils/jwt.js';
 import { MySocket } from './types.js';
-import { addClient, removeClient } from './services/clients.js';
+import { addClient, removeClient, setActiveRoomForClient } from './services/clients.js';
 import { addSocketToRoom, getRoom, removeSocketFromRoom } from './services/rooms.js';
 import { addMessage, Message } from './services/messages.js';
 
@@ -57,7 +57,9 @@ export async function handleConn(socket: MySocket) {
       return;
     }
 
+    setActiveRoomForClient(socket, roomId);
     addSocketToRoom(socket, roomId);
+    socket.emit('joinRoom', roomId);
 
     console.log(`Socket ${socket.id} joined room ${roomId}`);
 
@@ -82,7 +84,9 @@ export async function handleConn(socket: MySocket) {
       return;
     }
 
+    setActiveRoomForClient(socket, null);
     removeSocketFromRoom(socket, roomId);
+    socket.emit('leaveRoom', roomId);
 
     console.log(`Socket ${socket.id} left room ${roomId}`);
 

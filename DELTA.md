@@ -11,8 +11,8 @@ This repo is the dockerized chat CLI application.
 5. Run `pnpm run dev` and use the CLI application the interact with the server at port `3000` and database at port `5432`
 
 ## Task 3B Reverse engineering
-Smallest solution is with 12 charecters - `zp|}un|~~~~W`
-Exploit:
+Smallest solution is with 12 charecters - `zp|}un|~~~~W`  
+Exploit:  
 ```py
 from z3 import *
 KEY = 315525

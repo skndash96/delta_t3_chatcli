@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS leaderboard (
   room_id TEXT NOT NULL,
   user_name TEXT NOT NULL,
   score INTEGER NOT NULL DEFAULT 1,
+  active_mins INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (user_id, room_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE

@@ -73,7 +73,6 @@ export const getLeaderboard = async (db: Client, roomId: string) => {
     SELECT *
     FROM leaderboard
     WHERE room_id = $1
-    GROUP BY user_id
     ORDER BY score DESC
   `, [roomId]);
 
@@ -81,5 +80,6 @@ export const getLeaderboard = async (db: Client, roomId: string) => {
     userId: row.user_id,
     name: row.user_name,
     score: parseInt(row.score, 10),
+    activeMins: parseInt(row.active_mins, 10),
   }));
 }

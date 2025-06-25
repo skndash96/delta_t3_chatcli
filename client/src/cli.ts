@@ -23,6 +23,8 @@ export default class CLI {
   })
 
   constructor() {
+    this.onMessageHandler = this.onMessageHandler.bind(this);
+
     readStorageObject()
       .then(storage => {
         if (storage) {
@@ -226,7 +228,7 @@ command list:
         this.addLine(`Error: ${JSON.stringify(error)}`);
         return;
       }
-      this.addLine(`Room created: ${data}`);
+      this.addLine(`Room created`);
     } catch (error) {
       this.addLine(`Error creating room: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -255,14 +257,21 @@ command list:
 
     socket.emit('joinRoom', roomName);
 
-    socket.on('message', this.onMessageHandler.bind(this));
+    await new Promise(r => {
+      socket.once('joinRoom', (room: string) => {
+        console.log(`Joined room: ${room}`);
+        r(null);
+      })
+    })
+
+    socket.on('message', this.onMessageHandler);
 
     this.activeRoom = roomName;
 
     this.addLine(`Joined room: ${roomName}`);
   }
 
-  leaveRoom() {
+  async leaveRoom() {
     const socket = this.socket!;
 
     if (!this.activeRoom) {
@@ -272,10 +281,15 @@ command list:
 
     socket.emit('leaveRoom', this.activeRoom);
 
+    await new Promise(r => {
+      socket.once('leaveRoom', (room: string) => {
+        this.addLine(`Left room: ${room}`);
+        r(null);
+      })
+    })
+
     socket.off('message', this.onMessageHandler);
     this.activeRoom = null;
-
-    this.addLine(`Left room: ${this.activeRoom}`);
   }
 
   async sendMessage(message: string) {
@@ -313,28 +327,36 @@ command list:
         return;
       }
 
-      const { data } = await response.json();
+      const json = await response.json();
+      const data = json.data as {
+        roomId: string;
+        ownerId: number;
+        participants: { userId: number, name: string }[];
+        leaderboard: { userId: number, name: string, score: number, activeMins: number }[];
+      };
 
+      const users = new Map<string, { active: boolean, name: string, score: number, activeMins: number }>()
 
-      const users = new Map<string, { active: boolean, name: string, score: number }>()
-
-      data.participants.forEach((p: { userId: number, name: string }) => {
-        users.set(p.userId.toString(), { active: true, name: p.name, score: 0 });
+      data.participants.forEach(p => {
+        users.set(p.userId.toString(), { active: true, name: p.name, score: 0, activeMins: 0 });
       });
 
-      data.leaderboard.forEach((p: { userId: number, name: string, score: number }) => {
+      data.leaderboard.forEach(p => {
         if (users.has(p.userId.toString())) {
-          users.get(p.userId.toString())!.score = p.score;
+          const v = users.get(p.userId.toString())!
+          v.score = p.score;
+          v.activeMins = p.activeMins;
         } else {
-          users.set(p.userId.toString(), { active: false, name: p.name, score: p.score });
+          users.set(p.userId.toString(), { active: false, name: p.name, score: p.score, activeMins: p.activeMins });
         }
       })
 
       this.addLines([
         `room ID: ${data.roomId}`,
         `owner ID: ${data.ownerId}`,
+        `total messages: ${data.leaderboard.reduce((sum, v) => (sum+v.score), 0)}`,
         `participants ${data.participants.length}:`,
-        ...Array.from(users.values()).map(v => `${v.name} (${v.active ? "*" : "-"}) ${v.score}`),
+        ...Array.from(users.values()).map(v => `${v.name} (${v.active ? "*" : "-"}, total ${v.activeMins}) ${v.score}`),
       ]);
     } catch (error) {
       this.addLine(`Error fetching room info: ${error instanceof Error ? error.message : 'Unknown error'}`);
