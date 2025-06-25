@@ -8,6 +8,7 @@ import { handleConn } from './handleConn.js';
 import { MySocket } from './types.js';
 import authMiddleware from './middlewares/auth.js';
 import roomsRouter from './routes/rooms.js';
+import { verifyToken } from './utils/jwt.js';
 
 config();
 
@@ -37,6 +38,18 @@ async function startServer() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/rooms', authMiddleware, roomsRouter)  
+
+  app.get('/flag', (req, res) => {
+    const payload = verifyToken(req.headers.authorization?.split(' ')[1] || '') as any;
+
+    // Hint: Jwt secret is a 3 digit pin
+    if (!payload || payload.isAdmin !== true) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return
+    }
+
+    res.send("Congratulations! Here's your flag: chatcli{nice_job}");
+  })
 
   io.on('connection', (socket) => {
     const mySocket = socket as MySocket;
