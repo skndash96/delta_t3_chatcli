@@ -1,8 +1,7 @@
-version: '3.8'
-
 services:
   server:
     container_name: node_server
+    image: skndash96/chatcli-server:latest
     build:
       context: server
       dockerfile: Dockerfile
@@ -20,9 +19,7 @@ services:
 
   db:
     container_name: postgres_db
-    build:
-      context: postgres
-      dockerfile: Dockerfile
+    image: postgres:16-alpine
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 30s
@@ -37,6 +34,7 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
 
 volumes:
   db_data:
