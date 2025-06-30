@@ -171,3 +171,100 @@ else:
     print("Failed to find shared secret using baby-step giant-step method.")
 print()
 ```
+
+## Task 3B Forensics
+Below file will split the secret into 3 parts, hide each into three seperate images
+```sh
+#!/bin/bash
+
+secret="flag{you_got_me}"
+len=${#secret}
+part_len=$((len/3))
+
+p1=${secret:0:part_len}
+p2=${secret:part_len:part_len}
+p3=${secret:$((2*part_len))}
+
+tmp=$(mktemp)
+
+IMG="~/sample.png"
+KEY=123
+
+# steghide doesn't support png, so i went with bmp
+
+convert sample.png -define bmp:format=bmp3 sample_1.bmp
+cp sample_1.bmp sample_2.bmp
+cp sample_1.bmp sample_3.bmp
+
+echo $p1 > $tmp
+steghide embed -f -cf sample_1.bmp -ef $tmp -p $KEY
+
+echo $p2 > $tmp
+steghide embed -f -cf sample_2.bmp -ef $tmp -p $KEY
+
+echo $p3 > $tmp
+steghide embed -f -cf sample_3.bmp -ef $tmp -p $KEY
+
+rm $tmp
+```
+
+This python server will serve the bmp files. 
+```py
+from flask import Flask, send_file, abort
+
+app = Flask(__name__)
+
+FILES = {
+    "/file1.bmp": "sample_1.bmp",
+    "/file2.bmp": "sample_2.bmp",
+    "/file3.bmp": "sample_3.bmp"
+}
+
+@app.route("/<filename>")
+def serve_file(filename):
+    path = f"sample_{filename[-5]}.bmp"  # crude mapping from 'file1.bmp' → 'sample_1.bmp'
+    if path in FILES.values():
+        return send_file(path, mimetype="image/bmp")
+    else:
+        abort(404)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)
+```
+
+Below command captures the packet in loopback interface. For some reason `f.pcap` must be owned by super user ([bug](https://www.linuxquestions.org/questions/linux-networking-3/tshark-gives-permission-denied-writing-to-any-file-in-home-dir-650952/))
+```
+sudo tshark -i lo -w f.pcap
+```
+When capturing packets, curl the server using `curl http://localhost:8080/file1.bmp -o f.bmp` for all 3 files.  
+The pcap can then be analysed to get the three pictures, and then run `steghide extract` with the password to reveal the secrets 
+
+## 3B Binary Exploitation
+The C code contains the required vulnerablities
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+void win() {
+    system("cat flag.txt");
+}
+
+void vuln() {
+    char buf[64];
+    char input[128];
+    puts("input:");
+    fgets(input, sizeof(input), stdin);
+    printf(input);  //format string vulnerability
+
+    strcpy(buf, input);  //buffer overflow (no bounds check)
+}
+
+int main() {
+    setbuf(stdout, NULL);
+    vuln();
+    return 0;
+}
+```
+I'll learn the tools to exploit and update here soon 🙂
